@@ -18,7 +18,7 @@
 
   <%!-- UPLOAD AREA --%>
   <div :if={!@result} class="mb-8">
-    <form :if={!@analyzing} id="upload-form" phx-submit="analyze" phx-change="validate">
+    <form id="upload-form" phx-submit="analyze" phx-change="validate" class={if @analyzing, do: "hidden"}>
       <div
         class="pixel-border border-zinc-500 bg-zinc-900/50 p-8 md:p-12 text-center hover:border-emerald-400 pixel-transition scanlines"
         phx-drop-target={@uploads.photo.ref}
