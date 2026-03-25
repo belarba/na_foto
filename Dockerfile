@@ -12,13 +12,16 @@ ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
 
 FROM ${BUILDER_IMAGE} AS builder
 
-# install build dependencies (including Rust for Ortex, Tesseract for Evision)
+# install build dependencies
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-    build-essential git curl \
-    cargo rustc \
+    build-essential git curl ca-certificates \
     libtesseract-dev tesseract-ocr \
   && rm -rf /var/lib/apt/lists/*
+
+# install Rust via rustup (needed for Ortex/ONNX Runtime)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # prepare build dir
 WORKDIR /app
