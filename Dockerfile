@@ -89,7 +89,7 @@ WORKDIR "/app"
 RUN chown nobody /app
 
 # Create data directory for SQLite
-RUN mkdir -p /app/data && chown nobody:nobody /app/data
+RUN mkdir -p /app/data && chown nobody:nogroup /app/data
 
 # set runner ENV
 ENV MIX_ENV="prod"
