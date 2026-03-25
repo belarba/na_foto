@@ -50,20 +50,28 @@ defmodule NaFotoWeb.UploadLive do
             {:ok, {binary, entry.client_name}}
           end)
 
-        # Store image for preview (as base64)
-        base64 = Base.encode64(image_binary)
-        ext = Path.extname(filename) |> String.downcase()
-        mime = mime_for_ext(ext)
+        # Store a resized preview (not the full image — too large for WebSocket)
+        preview_base64 = generate_preview(image_binary)
+        socket = assign(socket, :uploaded_image, "data:image/jpeg;base64,#{preview_base64}")
 
-        socket = assign(socket, :uploaded_image, "data:#{mime};base64,#{base64}")
-
-        # Run analysis async
+        # Run analysis async with crash protection
         lv = self()
 
         Task.start(fn ->
-          result = Analyzer.analyze(image_binary, filename)
+          result =
+            try do
+              Analyzer.analyze(image_binary, filename)
+            rescue
+              e -> {:error, "Erro inesperado: #{Exception.message(e)}"}
+            catch
+              kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
+            end
+
           send(lv, {:analysis_complete, result})
         end)
+
+        # Safety timeout: if analysis takes more than 2 minutes, show error
+        Process.send_after(self(), :analysis_timeout, 120_000)
 
         {:noreply, socket}
 
@@ -145,6 +153,18 @@ defmodule NaFotoWeb.UploadLive do
      |> assign(:error, "Erro na análise: #{inspect(reason)}")}
   end
 
+  @impl true
+  def handle_info(:analysis_timeout, socket) do
+    if socket.assigns.analyzing do
+      {:noreply,
+       socket
+       |> assign(:analyzing, false)
+       |> assign(:error, "A análise demorou demasiado. Tenta com uma foto mais pequena ou noutro formato.")}
+    else
+      {:noreply, socket}
+    end
+  end
+
   defp mime_for_ext(".jpg"), do: "image/jpeg"
   defp mime_for_ext(".jpeg"), do: "image/jpeg"
   defp mime_for_ext(".png"), do: "image/png"
@@ -182,6 +202,36 @@ defmodule NaFotoWeb.UploadLive do
       end)
 
     Enum.reverse(pulled)
+  end
+
+  @preview_max 600
+  defp generate_preview(image_binary) do
+    try do
+      # Decode with Evision, resize, convert to Nx, encode with StbImage
+      mat = Evision.imdecode(image_binary, Evision.Constant.cv_IMREAD_COLOR())
+      {h, w, _} = Evision.Mat.shape(mat)
+
+      scale = min(@preview_max / w, @preview_max / h)
+
+      resized =
+        if scale < 1.0 do
+          Evision.resize(mat, {round(w * scale), round(h * scale)})
+        else
+          mat
+        end
+
+      # Convert BGR to RGB for StbImage
+      rgb = Evision.cvtColor(resized, Evision.Constant.cv_COLOR_BGR2RGB())
+      nx_tensor = Evision.Mat.to_nx(rgb, Nx.BinaryBackend)
+
+      img = StbImage.from_nx(nx_tensor)
+      jpeg_binary = StbImage.to_binary(img, :jpg)
+      Base.encode64(jpeg_binary)
+    rescue
+      _ ->
+        # Fallback: try to encode a very small version
+        Base.encode64(image_binary)
+    end
   end
 
   defp truncate_name(name) when byte_size(name) > 20 do
