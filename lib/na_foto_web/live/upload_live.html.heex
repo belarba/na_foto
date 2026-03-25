@@ -67,12 +67,7 @@
 
         <%!-- Preview of selected file --%>
         <div :for={entry <- @uploads.photo.entries} class="space-y-3">
-          <%!-- Thumbnail preview (hidden on mobile — too heavy for large photos) --%>
-          <div class="hidden md:block">
-            <.live_img_preview entry={entry} class="mx-auto max-h-48 max-w-full pixel-border border-zinc-600" style="image-rendering: auto; object-fit: contain" />
-          </div>
-
-          <%!-- File info (always visible) --%>
+          <%!-- File info --%>
           <div class="flex items-center justify-center gap-3">
             <svg viewBox="0 0 16 16" class="w-8 h-8 text-emerald-500 flex-shrink-0" style="image-rendering: pixelated">
               <rect x="1" y="4" width="14" height="10" fill="none" stroke="currentColor" stroke-width="1"/>
@@ -89,21 +84,20 @@
             </div>
           </div>
 
+          <%!-- Upload progress bar --%>
+          <div :if={entry.progress < 100} class="mt-2">
+            <div class="h-3 bg-zinc-800 pixel-border-sm border-zinc-600">
+              <div class="h-full bg-emerald-500 pixel-bar" style={"width: #{entry.progress}%"}></div>
+            </div>
+            <p class="font-silk text-zinc-500 text-xs mt-1 text-center">
+              A ENVIAR... <%= entry.progress %>%
+            </p>
+          </div>
+
           <p :for={err <- upload_errors(@uploads.photo, entry)} class="font-silk text-red-400 text-xs">
             &#x2718; <%= upload_error_to_string(err) %>
           </p>
         </div>
-      </div>
-
-      <div class="mt-6 flex justify-center">
-        <button
-          :if={@uploads.photo.entries != []}
-          type="submit"
-          disabled={@analyzing}
-          class="font-pixel text-xs px-8 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed pixel-transition pixel-glow"
-        >
-          <%= if @analyzing, do: "A ANALISAR...", else: ">> ANALISAR <<" %>
-        </button>
       </div>
     </form>
 
