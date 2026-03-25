@@ -86,17 +86,14 @@ ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
 WORKDIR "/app"
-RUN chown nobody /app
 
 # Create data directory for SQLite
-RUN mkdir -p /app/data && chown nobody:nogroup /app/data
+RUN mkdir -p /app/data
 
 # set runner ENV
 ENV MIX_ENV="prod"
 
 # Only copy the final release from the build stage
-COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/na_foto ./
-
-USER nobody
+COPY --from=builder /app/_build/${MIX_ENV}/rel/na_foto ./
 
 CMD ["/app/bin/server"]
