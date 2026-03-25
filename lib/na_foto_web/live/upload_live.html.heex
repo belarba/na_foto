@@ -1,0 +1,240 @@
+<div class="max-w-4xl mx-auto px-4 py-8" id="main" phx-hook="MobileDetect">
+  <%!-- HEADER --%>
+  <header class="text-center mb-12">
+    <h1 class="font-pixel text-2xl md:text-4xl text-emerald-400 drop-shadow-[3px_3px_0_rgba(0,0,0,0.8)]">
+      NA FOTO
+    </h1>
+    <p class="font-silk text-sm md:text-lg text-zinc-400 mt-4 tracking-wide">
+      &gt; <%= if @is_mobile, do: "TIRA UMA FOTO OU ESCOLHE DA GALERIA", else: "UPLOAD UMA FOTO E DESCOBRE O QUE LA ESTA" %>_<span class="blink">|</span>
+    </p>
+  </header>
+
+  <%!-- Error Message --%>
+  <div :if={@error} class="mb-6 pixel-border border-red-500 bg-red-950/80 p-4">
+    <p class="font-silk text-red-400 text-sm">
+      <span class="text-red-500">&#x2718;</span> ERROR: <%= @error %>
+    </p>
+  </div>
+
+  <%!-- UPLOAD AREA --%>
+  <div :if={!@result} class="mb-8">
+    <form id="upload-form" phx-submit="analyze" phx-change="validate">
+      <div
+        class="pixel-border border-zinc-500 bg-zinc-900/50 p-8 md:p-12 text-center hover:border-emerald-400 pixel-transition scanlines"
+        phx-drop-target={@uploads.photo.ref}
+      >
+        <.live_file_input upload={@uploads.photo} class="hidden" />
+
+        <div :if={@uploads.photo.entries == []}>
+          <%!-- Pixel camera icon --%>
+          <div class="mx-auto w-20 h-20 mb-6 relative">
+            <svg viewBox="0 0 16 16" class="w-full h-full" style="image-rendering: pixelated">
+              <rect x="1" y="4" width="14" height="10" fill="none" stroke="currentColor" stroke-width="1" class="text-zinc-500"/>
+              <rect x="5" y="2" width="6" height="3" fill="none" stroke="currentColor" stroke-width="1" class="text-zinc-500"/>
+              <rect x="6" y="7" width="4" height="4" fill="none" stroke="currentColor" stroke-width="1" class="text-zinc-500"/>
+              <rect x="7" y="8" width="2" height="2" fill="currentColor" class="text-emerald-500"/>
+            </svg>
+          </div>
+
+          <%!-- Mobile: show camera button prominently --%>
+          <div :if={@is_mobile} class="space-y-4">
+            <button
+              type="button"
+              id="camera-btn"
+              phx-hook="CameraCapture"
+              class="font-pixel text-xs px-6 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow"
+            >
+              TIRAR FOTO
+            </button>
+            <p class="font-silk text-zinc-500 text-xs">OU</p>
+            <label for={@uploads.photo.ref} class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow inline-block">
+              [ESCOLHER DA GALERIA]
+            </label>
+          </div>
+
+          <%!-- Desktop: drag & drop + file picker --%>
+          <div :if={!@is_mobile}>
+            <p class="font-silk text-zinc-400 text-sm">
+              ARRASTA UMA FOTO PARA AQUI OU
+            </p>
+            <label for={@uploads.photo.ref} class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow mt-2 inline-block">
+              [ESCOLHER FICHEIRO]
+            </label>
+          </div>
+
+          <p class="font-silk text-zinc-600 text-xs mt-3">JPG, PNG OU WEBP (MAX 10MB)</p>
+        </div>
+
+        <%!-- Preview of selected file --%>
+        <div :for={entry <- @uploads.photo.entries} class="space-y-4">
+          <.live_img_preview entry={entry} class="mx-auto max-h-64 pixel-border border-zinc-600" style="image-rendering: auto" />
+          <p class="font-silk text-sm text-emerald-400">&gt; <%= entry.client_name %></p>
+
+          <p :for={err <- upload_errors(@uploads.photo, entry)} class="font-silk text-red-400 text-xs">
+            &#x2718; <%= upload_error_to_string(err) %>
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-center">
+        <button
+          :if={@uploads.photo.entries != []}
+          type="submit"
+          disabled={@analyzing}
+          class="font-pixel text-xs px-8 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed pixel-transition pixel-glow"
+        >
+          <%= if @analyzing, do: "A ANALISAR...", else: ">> ANALISAR <<" %>
+        </button>
+      </div>
+    </form>
+
+    <%!-- Loading animation --%>
+    <div :if={@analyzing} class="mt-8 space-y-4">
+      <div class="pixel-border border-zinc-600 bg-zinc-900 p-4">
+        <p class="font-silk text-emerald-400 text-sm mb-3">&gt; A PROCESSAR IMAGEM...</p>
+        <div class="h-4 bg-zinc-800 pixel-border-sm border-zinc-600">
+          <div class="h-full bg-emerald-500 pixel-bar pixel-loading"></div>
+        </div>
+        <p class="font-silk text-zinc-500 text-xs mt-2">
+          SEGMENTACAO SEMANTICA + ANALISE DE CORES<span class="blink">_</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <%!-- ========== RESULTS ========== --%>
+  <div :if={@result} class="space-y-6">
+
+    <%!-- ANNOTATED IMAGE with arrows --%>
+    <div :if={@uploaded_image} class="relative w-full md:pr-44 mb-4" style="overflow: visible">
+      <div class="pixel-border border-emerald-500 bg-black p-2 relative scanlines" style="overflow: visible">
+        <img src={@uploaded_image} class="w-full object-contain mx-auto" id="analyzed-image" style="image-rendering: auto" />
+
+        <%!-- Overlay annotations — dot at centroid with line to label --%>
+        <svg class="absolute inset-0 w-full h-full pointer-events-none hidden md:block" style="overflow: visible">
+          <%= for ann <- @annotations do %>
+            <%!-- Dot at centroid --%>
+            <circle
+              cx={"#{ann.cx}%"}
+              cy={"#{ann.cy}%"}
+              r="5"
+              fill={ann.color}
+              stroke="#000"
+              stroke-width="2"
+            />
+            <circle
+              cx={"#{ann.cx}%"}
+              cy={"#{ann.cy}%"}
+              r="9"
+              fill="none"
+              stroke={ann.color}
+              stroke-width="1"
+              opacity="0.4"
+            />
+            <%!-- Line from centroid dot to label position on right --%>
+            <line
+              x1={"#{ann.cx}%"}
+              y1={"#{ann.cy}%"}
+              x2="100%"
+              y2={"#{ann.label_y}%"}
+              stroke={ann.color}
+              stroke-width="1.5"
+              stroke-dasharray="4,3"
+              opacity="0.8"
+            />
+          <% end %>
+        </svg>
+        <%!-- Labels positioned outside image on the right (desktop only) --%>
+        <div class="absolute inset-0 pointer-events-none hidden md:block" style="overflow: visible">
+          <div
+            :for={ann <- @annotations}
+            class="absolute"
+            style={"left: 102%; top: #{ann.label_y}%; transform: translateY(-50%)"}
+          >
+            <div class="annotation-label text-white whitespace-nowrap" style={"background: #{ann.color}; border-color: #{ann.color}"}>
+              <%= String.upcase(ann.category) %> <%= ann.percentage %>%
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="font-silk text-zinc-600 text-xs mt-1 text-center">SCAN COMPLETO</p>
+    </div>
+    <%!-- Spacer for labels that extend below the image --%>
+    <div class="h-4"></div>
+
+    <%!-- SEGMENTATION BARS --%>
+    <div :if={@result.segmentation != %{}} class="pixel-border border-zinc-600 bg-zinc-900/80 p-5">
+      <h2 class="font-pixel text-sm text-emerald-400 mb-5">&gt; SEGMENTACAO</h2>
+      <div class="space-y-3">
+        <div :for={ann <- @annotations} class="flex items-center gap-3">
+          <span class="font-silk text-xs text-zinc-400 w-28 text-right uppercase"><%= ann.category %></span>
+          <div class="flex-1 h-5 bg-zinc-800 pixel-border-sm border-zinc-700 overflow-hidden">
+            <div
+              class="h-full pixel-bar"
+              style={"width: #{ann.percentage}%; background-color: #{ann.color}"}
+            >
+            </div>
+          </div>
+          <span class="font-pixel text-[10px] text-zinc-300 w-16 text-right"><%= ann.percentage %>%</span>
+        </div>
+      </div>
+    </div>
+
+    <%!-- COLOR DISTRIBUTION --%>
+    <div :if={@result.colors != %{}} class="pixel-border border-zinc-600 bg-zinc-900/80 p-5">
+      <h2 class="font-pixel text-sm text-amber-400 mb-5">&gt; CORES</h2>
+      <div class="space-y-3">
+        <div :for={{color_name, percentage} <- sort_map(@result.colors)} class="flex items-center gap-3">
+          <span class="font-silk text-xs text-zinc-400 w-28 text-right uppercase"><%= color_name %></span>
+          <div class="flex-1 h-5 bg-zinc-800 pixel-border-sm border-zinc-700 overflow-hidden">
+            <div
+              class="h-full pixel-bar"
+              style={"width: #{percentage}%; background-color: #{color_css(color_name)}"}
+            >
+            </div>
+          </div>
+          <span class="font-pixel text-[10px] text-zinc-300 w-16 text-right"><%= percentage %>%</span>
+        </div>
+      </div>
+    </div>
+
+    <%!-- DOMINANT COLORS --%>
+    <div :if={@result.dominant_colors != []} class="pixel-border border-zinc-600 bg-zinc-900/80 p-5">
+      <h2 class="font-pixel text-sm text-fuchsia-400 mb-5">&gt; PALETA</h2>
+      <div class="flex gap-5 flex-wrap justify-center">
+        <div :for={color <- @result.dominant_colors} class="flex flex-col items-center">
+          <div
+            class="w-14 h-14 pixel-swatch"
+            style={"background-color: #{color["hex"]}"}
+          >
+          </div>
+          <span class="font-pixel text-[8px] text-zinc-400 mt-2"><%= color["hex"] %></span>
+          <span class="font-silk text-xs text-zinc-500"><%= color["percentage"] %>%</span>
+        </div>
+      </div>
+    </div>
+
+    <%!-- ACTION BUTTONS --%>
+    <div class="flex justify-center gap-4 pt-2">
+      <button
+        phx-click="clear"
+        class="font-pixel text-[10px] px-6 py-3 bg-zinc-800 text-zinc-300 pixel-border-sm border-zinc-600 hover:border-emerald-400 hover:text-emerald-400 pixel-transition"
+      >
+        NOVA FOTO
+      </button>
+      <.link
+        navigate="/history"
+        class="font-pixel text-[10px] px-6 py-3 bg-zinc-800 text-zinc-300 pixel-border-sm border-zinc-600 hover:border-amber-400 hover:text-amber-400 pixel-transition inline-block"
+      >
+        HISTORICO
+      </.link>
+    </div>
+  </div>
+
+  <%!-- Footer --%>
+  <footer class="mt-16 text-center">
+    <p class="font-pixel text-[8px] text-zinc-700">
+      BUILT WITH ELIXIR + PHOENIX + SEGFORMER AI
+    </p>
+  </footer>
+</div>

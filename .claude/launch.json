@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "phoenix",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/danielsilva/.asdf/shims:/Users/danielsilva/.cargo/bin:$PATH && cd /Users/danielsilva/Documents/code/na_foto && mix phx.server"],
+      "port": 4000
+    }
+  ]
+}
