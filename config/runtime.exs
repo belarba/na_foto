@@ -21,12 +21,7 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
-  database_path =
-    System.get_env("DATABASE_PATH") ||
-      raise """
-      environment variable DATABASE_PATH is missing.
-      For example: /etc/na_foto/na_foto.db
-      """
+  database_path = System.get_env("DATABASE_PATH") || "/app/data/na_foto.db"
 
   config :na_foto, NaFoto.Repo,
     database: database_path,
