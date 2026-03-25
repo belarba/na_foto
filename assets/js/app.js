@@ -36,28 +36,24 @@ const Hooks = {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
     }
   },
-  // Camera button: triggers the hidden file input with capture attribute
-  CameraCapture: {
+  // Camera label: when user takes a photo via the native camera input,
+  // transfer the file to the LiveView upload input
+  CameraLabel: {
     mounted() {
-      this.el.addEventListener("click", () => {
-        // Create a temporary file input with capture
-        const input = document.createElement("input")
-        input.type = "file"
-        input.accept = "image/*"
-        input.capture = "environment"
-        input.addEventListener("change", (e) => {
-          if (e.target.files.length > 0) {
-            // Find the LiveView file input and set the file
-            const liveInput = document.querySelector("input[data-phx-upload-ref]")
-            if (liveInput) {
-              const dt = new DataTransfer()
-              dt.items.add(e.target.files[0])
-              liveInput.files = dt.files
-              liveInput.dispatchEvent(new Event("change", { bubbles: true }))
-            }
+      const cameraInput = this.el.querySelector("#camera-input")
+      if (!cameraInput) return
+
+      cameraInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+          const liveInput = document.querySelector("input[data-phx-upload-ref]")
+          if (liveInput) {
+            // Transfer the camera file to LiveView's upload input
+            const dt = new DataTransfer()
+            dt.items.add(e.target.files[0])
+            liveInput.files = dt.files
+            liveInput.dispatchEvent(new Event("input", { bubbles: true }))
           }
-        })
-        input.click()
+        }
       })
     }
   }
