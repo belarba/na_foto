@@ -65,14 +65,28 @@
         </div>
 
         <%!-- Preview of selected file --%>
-        <div :for={entry <- @uploads.photo.entries} class="space-y-4">
-          <.live_img_preview entry={entry} class="mx-auto max-h-48 md:max-h-64 max-w-full pixel-border border-zinc-600" style="image-rendering: auto; object-fit: contain" />
-          <p class="font-silk text-sm text-emerald-400 truncate max-w-xs mx-auto" title={entry.client_name}>
-            &gt; <%= truncate_name(entry.client_name) %>
-          </p>
-          <p class="font-silk text-zinc-500 text-xs">
-            <%= Float.round(entry.client_size / 1_000_000, 1) %> MB
-          </p>
+        <div :for={entry <- @uploads.photo.entries} class="space-y-3">
+          <%!-- Thumbnail preview (hidden on mobile — too heavy for large photos) --%>
+          <div class="hidden md:block">
+            <.live_img_preview entry={entry} class="mx-auto max-h-48 max-w-full pixel-border border-zinc-600" style="image-rendering: auto; object-fit: contain" />
+          </div>
+
+          <%!-- File info (always visible) --%>
+          <div class="flex items-center justify-center gap-3">
+            <svg viewBox="0 0 16 16" class="w-8 h-8 text-emerald-500 flex-shrink-0" style="image-rendering: pixelated">
+              <rect x="1" y="4" width="14" height="10" fill="none" stroke="currentColor" stroke-width="1"/>
+              <rect x="6" y="7" width="4" height="4" fill="none" stroke="currentColor" stroke-width="1"/>
+              <rect x="7" y="8" width="2" height="2" fill="currentColor"/>
+            </svg>
+            <div>
+              <p class="font-silk text-sm text-emerald-400 truncate max-w-[200px]" title={entry.client_name}>
+                <%= truncate_name(entry.client_name) %>
+              </p>
+              <p class="font-silk text-zinc-500 text-xs">
+                <%= Float.round(entry.client_size / 1_000_000, 1) %> MB
+              </p>
+            </div>
+          </div>
 
           <p :for={err <- upload_errors(@uploads.photo, entry)} class="font-silk text-red-400 text-xs">
             &#x2718; <%= upload_error_to_string(err) %>

@@ -83,24 +83,6 @@ const Hooks = {
   MobileDetect: {
     mounted() {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
-
-      // Intercept file input to resize before upload
-      const liveInput = document.querySelector("input[data-phx-upload-ref]")
-      if (liveInput) {
-        liveInput.addEventListener("change", async (e) => {
-          if (e.target.files.length === 0) return
-
-          const original = e.target.files[0]
-          const resized = await resizeImage(original)
-
-          // Only replace if actually resized
-          if (resized !== original) {
-            const dt = new DataTransfer()
-            dt.items.add(resized)
-            e.target.files = dt.files
-          }
-        }, true) // capture phase — runs before LiveView's handler
-      }
     }
   },
   // Camera capture: temporarily add capture attribute to the LiveView file input

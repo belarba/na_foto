@@ -43,37 +43,51 @@ defmodule NaFotoWeb.UploadLive do
           |> assign(:error, nil)
           |> assign(:result, nil)
 
-        # Consume the upload and start analysis
-        [{image_binary, filename}] =
-          consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
-            binary = File.read!(path)
-            {:ok, {binary, entry.client_name}}
-          end)
+        try do
+          # Consume the upload
+          [{image_binary, filename}] =
+            consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
+              binary = File.read!(path)
+              {:ok, {binary, entry.client_name}}
+            end)
 
-        # Store a resized preview (not the full image — too large for WebSocket)
-        preview_base64 = generate_preview(image_binary)
-        socket = assign(socket, :uploaded_image, "data:image/jpeg;base64,#{preview_base64}")
-
-        # Run analysis async with crash protection
-        lv = self()
-
-        Task.start(fn ->
-          result =
+          # Store a resized preview
+          preview_base64 =
             try do
-              Analyzer.analyze(image_binary, filename)
+              generate_preview(image_binary)
             rescue
-              e -> {:error, "Erro inesperado: #{Exception.message(e)}"}
-            catch
-              kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
+              _ -> Base.encode64(image_binary)
             end
 
-          send(lv, {:analysis_complete, result})
-        end)
+          socket = assign(socket, :uploaded_image, "data:image/jpeg;base64,#{preview_base64}")
 
-        # Safety timeout: if analysis takes more than 2 minutes, show error
-        Process.send_after(self(), :analysis_timeout, 120_000)
+          # Run analysis async with crash protection
+          lv = self()
 
-        {:noreply, socket}
+          Task.start(fn ->
+            result =
+              try do
+                Analyzer.analyze(image_binary, filename)
+              rescue
+                e -> {:error, "Erro inesperado: #{Exception.message(e)}"}
+              catch
+                kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
+              end
+
+            send(lv, {:analysis_complete, result})
+          end)
+
+          # Safety timeout
+          Process.send_after(self(), :analysis_timeout, 120_000)
+
+          {:noreply, socket}
+        rescue
+          e ->
+            {:noreply,
+             socket
+             |> assign(:analyzing, false)
+             |> assign(:error, "Erro ao processar ficheiro: #{Exception.message(e)}")}
+        end
 
       _ ->
         {:noreply, assign(socket, :error, "Por favor seleciona uma foto primeiro.")}
