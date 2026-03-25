@@ -62,13 +62,16 @@
             </label>
           </div>
 
-          <p class="font-silk text-zinc-600 text-xs mt-3">JPG, PNG OU WEBP (MAX 10MB)</p>
+          <p class="font-silk text-zinc-600 text-xs mt-3">JPG, PNG, WEBP OU HEIC (MAX 15MB)</p>
         </div>
 
         <%!-- Preview of selected file --%>
         <div :for={entry <- @uploads.photo.entries} class="space-y-4">
-          <.live_img_preview entry={entry} class="mx-auto max-h-64 pixel-border border-zinc-600" style="image-rendering: auto" />
+          <.live_img_preview entry={entry} class="mx-auto max-h-48 md:max-h-64 max-w-full pixel-border border-zinc-600" style="image-rendering: auto; object-fit: contain" />
           <p class="font-silk text-sm text-emerald-400">&gt; <%= entry.client_name %></p>
+          <p class="font-silk text-zinc-500 text-xs">
+            <%= Float.round(entry.client_size / 1_000_000, 1) %> MB
+          </p>
 
           <p :for={err <- upload_errors(@uploads.photo, entry)} class="font-silk text-red-400 text-xs">
             &#x2718; <%= upload_error_to_string(err) %>

@@ -3,8 +3,8 @@ defmodule NaFotoWeb.UploadLive do
 
   alias NaFoto.Analyzer
 
-  @max_file_size 10_000_000
-  @accepted_types ~w(.jpg .jpeg .png .webp)
+  @max_file_size 15_000_000
+  @accepted_types ~w(.jpg .jpeg .png .webp .heic .heif)
 
   @impl true
   def mount(_params, _session, socket) do
