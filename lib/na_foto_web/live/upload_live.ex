@@ -184,6 +184,14 @@ defmodule NaFotoWeb.UploadLive do
     Enum.reverse(pulled)
   end
 
+  defp truncate_name(name) when byte_size(name) > 20 do
+    ext = Path.extname(name)
+    base = Path.basename(name, ext)
+    String.slice(base, 0, 14) <> "..." <> ext
+  end
+
+  defp truncate_name(name), do: name
+
   defp color_css("vermelho"), do: "#EF4444"
   defp color_css("laranja"), do: "#F97316"
   defp color_css("amarelo"), do: "#EAB308"

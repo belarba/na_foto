@@ -67,7 +67,9 @@
         <%!-- Preview of selected file --%>
         <div :for={entry <- @uploads.photo.entries} class="space-y-4">
           <.live_img_preview entry={entry} class="mx-auto max-h-48 md:max-h-64 max-w-full pixel-border border-zinc-600" style="image-rendering: auto; object-fit: contain" />
-          <p class="font-silk text-sm text-emerald-400">&gt; <%= entry.client_name %></p>
+          <p class="font-silk text-sm text-emerald-400 truncate max-w-xs mx-auto" title={entry.client_name}>
+            &gt; <%= truncate_name(entry.client_name) %>
+          </p>
           <p class="font-silk text-zinc-500 text-xs">
             <%= Float.round(entry.client_size / 1_000_000, 1) %> MB
           </p>
