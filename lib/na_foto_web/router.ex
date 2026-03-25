@@ -19,6 +19,7 @@ defmodule NaFotoWeb.Router do
 
     live "/", UploadLive, :index
     live "/history", HistoryLive, :index
+    live "/about", AboutLive, :index
   end
 
   # Other scopes may use custom stacks.
