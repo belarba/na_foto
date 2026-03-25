@@ -36,16 +36,15 @@
             </svg>
           </div>
 
-          <%!-- Mobile: camera + gallery buttons --%>
+          <%!-- Mobile: two labels, one for camera (with capture), one for gallery --%>
           <div :if={@is_mobile} class="space-y-5">
-            <label
-              id="camera-label"
-              phx-hook="CameraLabel"
+            <div
+              id="camera-btn"
+              phx-hook="CameraCapture"
               class="font-pixel text-xs px-6 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow inline-block cursor-pointer"
             >
               TIRAR FOTO
-              <input type="file" accept="image/*" capture="environment" class="hidden" id="camera-input" />
-            </label>
+            </div>
             <p class="font-silk text-zinc-500 text-xs">OU</p>
             <label for={@uploads.photo.ref} class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow inline-block">
               [ESCOLHER DA GALERIA]

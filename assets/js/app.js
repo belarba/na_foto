@@ -36,23 +36,19 @@ const Hooks = {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
     }
   },
-  // Camera label: when user takes a photo via the native camera input,
-  // transfer the file to the LiveView upload input
-  CameraLabel: {
+  // Camera capture: temporarily add capture attribute to the LiveView file input,
+  // trigger it, then remove capture so "gallery" button works normally
+  CameraCapture: {
     mounted() {
-      const cameraInput = this.el.querySelector("#camera-input")
-      if (!cameraInput) return
-
-      cameraInput.addEventListener("change", (e) => {
-        if (e.target.files.length > 0) {
-          const liveInput = document.querySelector("input[data-phx-upload-ref]")
-          if (liveInput) {
-            // Transfer the camera file to LiveView's upload input
-            const dt = new DataTransfer()
-            dt.items.add(e.target.files[0])
-            liveInput.files = dt.files
-            liveInput.dispatchEvent(new Event("input", { bubbles: true }))
-          }
+      this.el.addEventListener("click", () => {
+        const liveInput = document.querySelector("input[data-phx-upload-ref]")
+        if (liveInput) {
+          // Add capture attribute to make mobile open camera
+          liveInput.setAttribute("capture", "environment")
+          // Trigger the native file picker (which now opens camera)
+          liveInput.click()
+          // Remove capture after a short delay so gallery button still works
+          setTimeout(() => liveInput.removeAttribute("capture"), 1000)
         }
       })
     }
