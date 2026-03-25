@@ -28,26 +28,89 @@ import topbar from "../vendor/topbar"
 // Detect mobile device
 const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
+// Resize image client-side before upload (max 1600px on longest side)
+const MAX_DIMENSION = 1600
+
+function resizeImage(file) {
+  return new Promise((resolve) => {
+    // Skip non-image or already small files
+    if (!file.type.startsWith("image/")) return resolve(file)
+
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+
+      const { width, height } = img
+
+      // Skip if already small enough
+      if (width <= MAX_DIMENSION && height <= MAX_DIMENSION) return resolve(file)
+
+      // Calculate new dimensions
+      const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height)
+      const newW = Math.round(width * ratio)
+      const newH = Math.round(height * ratio)
+
+      const canvas = document.createElement("canvas")
+      canvas.width = newW
+      canvas.height = newH
+      const ctx = canvas.getContext("2d")
+      ctx.drawImage(img, 0, 0, newW, newH)
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const resized = new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() })
+          resolve(resized)
+        } else {
+          resolve(file)
+        }
+      }, "image/jpeg", 0.85)
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(file)
+    }
+
+    img.src = url
+  })
+}
+
 // Custom hooks
 const Hooks = {
   // Detects mobile and pushes event to LiveView
   MobileDetect: {
     mounted() {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
+
+      // Intercept file input to resize before upload
+      const liveInput = document.querySelector("input[data-phx-upload-ref]")
+      if (liveInput) {
+        liveInput.addEventListener("change", async (e) => {
+          if (e.target.files.length === 0) return
+
+          const original = e.target.files[0]
+          const resized = await resizeImage(original)
+
+          // Only replace if actually resized
+          if (resized !== original) {
+            const dt = new DataTransfer()
+            dt.items.add(resized)
+            e.target.files = dt.files
+          }
+        }, true) // capture phase — runs before LiveView's handler
+      }
     }
   },
-  // Camera capture: temporarily add capture attribute to the LiveView file input,
-  // trigger it, then remove capture so "gallery" button works normally
+  // Camera capture: temporarily add capture attribute to the LiveView file input
   CameraCapture: {
     mounted() {
       this.el.addEventListener("click", () => {
         const liveInput = document.querySelector("input[data-phx-upload-ref]")
         if (liveInput) {
-          // Add capture attribute to make mobile open camera
           liveInput.setAttribute("capture", "environment")
-          // Trigger the native file picker (which now opens camera)
           liveInput.click()
-          // Remove capture after a short delay so gallery button still works
           setTimeout(() => liveInput.removeAttribute("capture"), 1000)
         }
       })
