@@ -18,7 +18,7 @@
 
   <%!-- UPLOAD AREA --%>
   <div :if={!@result} class="mb-8">
-    <form id="upload-form" phx-submit="analyze" phx-change="validate">
+    <form :if={!@analyzing} id="upload-form" phx-submit="analyze" phx-change="validate">
       <div
         class="pixel-border border-zinc-500 bg-zinc-900/50 p-8 md:p-12 text-center hover:border-emerald-400 pixel-transition scanlines"
         phx-drop-target={@uploads.photo.ref}
@@ -128,10 +128,23 @@
       <div class="pixel-border border-emerald-500 bg-black p-2 relative scanlines" style="overflow: visible">
         <img src={@uploaded_image} class="w-full object-contain mx-auto" id="analyzed-image" style="image-rendering: auto" />
 
-        <%!-- Overlay annotations — dot at centroid with line to label --%>
+        <%!-- Mobile: small labels directly on the image --%>
+        <div class="absolute inset-0 pointer-events-none md:hidden">
+          <div
+            :for={ann <- @annotations}
+            class="absolute"
+            style={"left: #{ann.cx}%; top: #{ann.cy}%; transform: translate(-50%, -100%) translateY(-4px)"}
+          >
+            <div class="text-white text-center" style="font-family: 'Press Start 2P', monospace; font-size: 6px; padding: 2px 4px; border: 1px solid; box-shadow: 1px 1px 0 rgba(0,0,0,0.5); background: #{ann.color}; border-color: #{ann.color}; white-space: nowrap;">
+              <%= String.upcase(ann.category) %> <%= ann.percentage %>%
+            </div>
+            <div class="mx-auto" style={"width: 6px; height: 6px; background: #{ann.color}; border: 1px solid #000; border-radius: 50%; margin-top: 2px"}></div>
+          </div>
+        </div>
+
+        <%!-- Desktop: dots with lines to labels on the right --%>
         <svg class="absolute inset-0 w-full h-full pointer-events-none hidden md:block" style="overflow: visible">
           <%= for ann <- @annotations do %>
-            <%!-- Dot at centroid --%>
             <circle
               cx={"#{ann.cx}%"}
               cy={"#{ann.cy}%"}
@@ -149,7 +162,6 @@
               stroke-width="1"
               opacity="0.4"
             />
-            <%!-- Line from centroid dot to label position on right --%>
             <line
               x1={"#{ann.cx}%"}
               y1={"#{ann.cy}%"}
@@ -162,7 +174,7 @@
             />
           <% end %>
         </svg>
-        <%!-- Labels positioned outside image on the right (desktop only) --%>
+        <%!-- Desktop: Labels positioned outside image on the right --%>
         <div class="absolute inset-0 pointer-events-none hidden md:block" style="overflow: visible">
           <div
             :for={ann <- @annotations}
