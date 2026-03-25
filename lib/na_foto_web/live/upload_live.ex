@@ -19,9 +19,7 @@ defmodule NaFotoWeb.UploadLive do
      |> allow_upload(:photo,
        accept: @accepted_types,
        max_entries: 1,
-       max_file_size: @max_file_size,
-       auto_upload: true,
-       progress: &handle_progress/3
+       max_file_size: @max_file_size
      )}
   end
 
@@ -35,66 +33,8 @@ defmodule NaFotoWeb.UploadLive do
     {:noreply, socket}
   end
 
-  # Called automatically as upload progresses (auto_upload: true)
-  defp handle_progress(:photo, entry, socket) do
-    if entry.done? do
-      # Upload complete — automatically start analysis
-      socket =
-        socket
-        |> assign(:analyzing, true)
-        |> assign(:error, nil)
-        |> assign(:result, nil)
-
-      try do
-        [{image_binary, filename}] =
-          consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
-            binary = File.read!(path)
-            {:ok, {binary, entry.client_name}}
-          end)
-
-        preview_base64 =
-          try do
-            generate_preview(image_binary)
-          rescue
-            _ -> Base.encode64(image_binary)
-          end
-
-        socket = assign(socket, :uploaded_image, "data:image/jpeg;base64,#{preview_base64}")
-
-        lv = self()
-
-        Task.start(fn ->
-          result =
-            try do
-              Analyzer.analyze(image_binary, filename)
-            rescue
-              e -> {:error, "Erro inesperado: #{Exception.message(e)}"}
-            catch
-              kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
-            end
-
-          send(lv, {:analysis_complete, result})
-        end)
-
-        Process.send_after(self(), :analysis_timeout, 120_000)
-
-        {:noreply, socket}
-      rescue
-        e ->
-          {:noreply,
-           socket
-           |> assign(:analyzing, false)
-           |> assign(:error, "Erro ao processar ficheiro: #{Exception.message(e)}")}
-      end
-    else
-      {:noreply, socket}
-    end
-  end
-
   @impl true
   def handle_event("analyze", _params, socket) do
-    # With auto_upload, analysis starts automatically when upload completes.
-    # This handler is kept as fallback for manual submit.
     case uploaded_entries(socket, :photo) do
       {[_entry | _], _} ->
         socket =
