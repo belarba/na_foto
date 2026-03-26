@@ -1,5 +1,6 @@
 defmodule NaFotoWeb.UploadLive do
   use NaFotoWeb, :live_view
+  require Logger
 
   alias NaFoto.Analyzer
 
@@ -35,9 +36,12 @@ defmodule NaFotoWeb.UploadLive do
 
   @impl true
   def handle_event("analyze", _params, socket) do
-    case uploaded_entries(socket, :photo) do
-      {[_entry | _], _} ->
-        # Show loading immediately, then process in next tick
+    {entries, _} = uploaded_entries(socket, :photo)
+    Logger.info("[NA_FOTO] analyze event received. entries=#{length(entries)}")
+
+    case entries do
+      [_entry | _] ->
+        Logger.info("[NA_FOTO] starting analysis, setting analyzing=true")
         socket =
           socket
           |> assign(:analyzing, true)
@@ -49,40 +53,57 @@ defmodule NaFotoWeb.UploadLive do
         {:noreply, socket}
 
       _ ->
+        Logger.warning("[NA_FOTO] no entries found!")
         {:noreply, assign(socket, :error, "Por favor seleciona uma foto primeiro.")}
     end
   end
 
   @impl true
   def handle_info(:do_analysis, socket) do
+    Logger.info("[NA_FOTO] do_analysis started")
+
     try do
       [{image_binary, filename}] =
         consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
+          Logger.info("[NA_FOTO] consuming file: #{entry.client_name}, path: #{path}")
           binary = File.read!(path)
+          Logger.info("[NA_FOTO] file read OK, size: #{byte_size(binary)} bytes")
           {:ok, {binary, entry.client_name}}
         end)
+
+      Logger.info("[NA_FOTO] generating preview...")
 
       preview_base64 =
         try do
           generate_preview(image_binary)
         rescue
-          _ -> Base.encode64(image_binary)
+          e ->
+            Logger.error("[NA_FOTO] preview generation failed: #{Exception.message(e)}")
+            Base.encode64(image_binary)
         end
 
+      Logger.info("[NA_FOTO] preview OK, launching analysis task...")
       socket = assign(socket, :uploaded_image, "data:image/jpeg;base64,#{preview_base64}")
 
       lv = self()
 
       Task.start(fn ->
+        Logger.info("[NA_FOTO] analysis task started for #{filename}")
+
         result =
           try do
             Analyzer.analyze(image_binary, filename)
           rescue
-            e -> {:error, "Erro inesperado: #{Exception.message(e)}"}
+            e ->
+              Logger.error("[NA_FOTO] analysis error: #{Exception.message(e)}")
+              {:error, "Erro inesperado: #{Exception.message(e)}"}
           catch
-            kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
+            kind, reason ->
+              Logger.error("[NA_FOTO] analysis crash: #{kind}: #{inspect(reason)}")
+              {:error, "#{kind}: #{inspect(reason)}"}
           end
 
+        Logger.info("[NA_FOTO] analysis complete, sending result: #{inspect(elem(result, 0), limit: 1)}")
         send(lv, {:analysis_complete, result})
       end)
 
@@ -91,6 +112,8 @@ defmodule NaFotoWeb.UploadLive do
       {:noreply, socket}
     rescue
       e ->
+        Logger.error("[NA_FOTO] do_analysis CRASHED: #{Exception.message(e)}\n#{Exception.format_stacktrace(__STACKTRACE__)}")
+
         {:noreply,
          socket
          |> assign(:analyzing, false)
@@ -271,40 +294,6 @@ defmodule NaFotoWeb.UploadLive do
   defp color_css("branco"), do: "#E5E7EB"
   defp color_css("preto"), do: "#1F2937"
   defp color_css(_), do: "#6B7280"
-
-  defp story_data(assigns) do
-    %{
-      image: assigns.uploaded_image,
-      annotations:
-        Enum.map(assigns.annotations, fn ann ->
-          %{
-            category: ann.category,
-            percentage: ann.percentage,
-            cx: ann.cx,
-            cy: ann.cy,
-            color: ann.color
-          }
-        end),
-      colors: assigns.result.colors || %{},
-      colorMap: %{
-        "vermelho" => "#EF4444",
-        "laranja" => "#F97316",
-        "amarelo" => "#EAB308",
-        "verde" => "#22C55E",
-        "azul" => "#3B82F6",
-        "roxo" => "#A855F7",
-        "castanho" => "#92400E",
-        "cinzento" => "#9CA3AF",
-        "branco" => "#E5E7EB",
-        "preto" => "#1F2937"
-      },
-      dominantColors:
-        Enum.map(assigns.result.dominant_colors || [], fn c ->
-          %{hex: c["hex"], percentage: c["percentage"]}
-        end)
-    }
-    |> Jason.encode!()
-  end
 
   defp upload_error_to_string(:too_large), do: "FICHEIRO DEMASIADO GRANDE (MAX 10MB)"
   defp upload_error_to_string(:too_many_files), do: "APENAS UMA FOTO DE CADA VEZ"

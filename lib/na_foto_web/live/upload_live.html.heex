@@ -247,7 +247,9 @@
       <button
         id="share-btn"
         phx-hook="StoryGenerator"
-        data-story-data={story_data(assigns)}
+        data-annotations={Jason.encode!(@annotations)}
+        data-colors={Jason.encode!(@result.colors || %{})}
+        data-dominant-colors={Jason.encode!(@result.dominant_colors || [])}
         class="font-pixel text-[10px] px-6 py-3 bg-emerald-600 text-white pixel-border-sm border-emerald-400 hover:bg-emerald-500 pixel-transition"
       >
         PARTILHAR

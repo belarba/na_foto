@@ -365,8 +365,19 @@ const StoryGenerator = {
     btn.disabled = true
 
     try {
-      // Get data from data attributes
-      const data = JSON.parse(this.el.dataset.storyData)
+      // Get image from DOM, other data from data attributes
+      const imgEl = document.getElementById("analyzed-image")
+      const data = {
+        image: imgEl ? imgEl.src : "",
+        annotations: JSON.parse(btn.dataset.annotations || "[]"),
+        colors: JSON.parse(btn.dataset.colors || "{}"),
+        colorMap: {
+          "vermelho": "#EF4444", "laranja": "#F97316", "amarelo": "#EAB308",
+          "verde": "#22C55E", "azul": "#3B82F6", "roxo": "#A855F7",
+          "castanho": "#92400E", "cinzento": "#9CA3AF", "branco": "#E5E7EB", "preto": "#1F2937"
+        },
+        dominantColors: JSON.parse(btn.dataset.dominantColors || "[]")
+      }
 
       const [canvas1, canvas2] = await Promise.all([
         generateSlide1(data),
@@ -389,8 +400,8 @@ const StoryGenerator = {
           try {
             await navigator.share({
               files,
-              title: "Na Foto - Análise de Imagem",
-              text: "Vê o que a IA encontrou na minha foto!"
+              title: "Na Foto",
+              text: "O que tem Na Foto..."
             })
             btn.textContent = originalText
             btn.disabled = false
