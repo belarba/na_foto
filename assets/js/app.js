@@ -24,6 +24,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/na_foto"
 import topbar from "../vendor/topbar"
+import StoryGenerator from "./story_generator"
 
 // Detect mobile device
 const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -86,6 +87,7 @@ const Hooks = {
     }
   },
   // Camera capture: temporarily add capture attribute to the LiveView file input
+  StoryGenerator,
   CameraCapture: {
     mounted() {
       this.el.addEventListener("click", (e) => {

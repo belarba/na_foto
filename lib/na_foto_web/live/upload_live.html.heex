@@ -243,7 +243,15 @@
     </div>
 
     <%!-- ACTION BUTTONS --%>
-    <div class="flex justify-center gap-4 pt-2">
+    <div class="flex justify-center gap-3 pt-2 flex-wrap">
+      <button
+        id="share-btn"
+        phx-hook="StoryGenerator"
+        data-story-data={story_data(assigns)}
+        class="font-pixel text-[10px] px-6 py-3 bg-emerald-600 text-white pixel-border-sm border-emerald-400 hover:bg-emerald-500 pixel-transition"
+      >
+        PARTILHAR
+      </button>
       <button
         phx-click="clear"
         class="font-pixel text-[10px] px-6 py-3 bg-zinc-800 text-zinc-300 pixel-border-sm border-zinc-600 hover:border-emerald-400 hover:text-emerald-400 pixel-transition"

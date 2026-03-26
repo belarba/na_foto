@@ -272,6 +272,40 @@ defmodule NaFotoWeb.UploadLive do
   defp color_css("preto"), do: "#1F2937"
   defp color_css(_), do: "#6B7280"
 
+  defp story_data(assigns) do
+    %{
+      image: assigns.uploaded_image,
+      annotations:
+        Enum.map(assigns.annotations, fn ann ->
+          %{
+            category: ann.category,
+            percentage: ann.percentage,
+            cx: ann.cx,
+            cy: ann.cy,
+            color: ann.color
+          }
+        end),
+      colors: assigns.result.colors || %{},
+      colorMap: %{
+        "vermelho" => "#EF4444",
+        "laranja" => "#F97316",
+        "amarelo" => "#EAB308",
+        "verde" => "#22C55E",
+        "azul" => "#3B82F6",
+        "roxo" => "#A855F7",
+        "castanho" => "#92400E",
+        "cinzento" => "#9CA3AF",
+        "branco" => "#E5E7EB",
+        "preto" => "#1F2937"
+      },
+      dominantColors:
+        Enum.map(assigns.result.dominant_colors || [], fn c ->
+          %{hex: c["hex"], percentage: c["percentage"]}
+        end)
+    }
+    |> Jason.encode!()
+  end
+
   defp upload_error_to_string(:too_large), do: "FICHEIRO DEMASIADO GRANDE (MAX 10MB)"
   defp upload_error_to_string(:too_many_files), do: "APENAS UMA FOTO DE CADA VEZ"
   defp upload_error_to_string(:not_accepted), do: "FORMATO NAO ACEITE. USA JPG, PNG OU WEBP"
