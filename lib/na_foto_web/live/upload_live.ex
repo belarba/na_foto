@@ -22,8 +22,8 @@ defmodule NaFotoWeb.UploadLive do
        max_entries: 1,
        max_file_size: @max_file_size,
        auto_upload: true,
-       chunk_size: 64_000,
-       chunk_timeout: 30_000
+       chunk_size: 512_000,
+       chunk_timeout: 60_000
      )}
   end
 
