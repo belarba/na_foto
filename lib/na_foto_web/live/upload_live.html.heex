@@ -1,4 +1,4 @@
-<div class="max-w-4xl mx-auto px-4 py-8" id="main" phx-hook="ImageProxy">
+<div class="max-w-4xl mx-auto px-4 py-8" id="main" phx-hook="MobileDetect">
   <%!-- HEADER --%>
   <header class="text-center mb-12">
     <h1 class="font-pixel text-2xl md:text-4xl text-emerald-400 drop-shadow-[3px_3px_0_rgba(0,0,0,0.8)]">
@@ -39,37 +39,21 @@
             </svg>
           </div>
 
-          <%!-- Mobile: two buttons via proxy input (compress before upload) --%>
-          <div :if={@is_mobile} class="space-y-5">
-            <div
-              id="camera-btn"
-              phx-hook="CameraCapture"
-              class="font-pixel text-xs px-6 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow inline-block cursor-pointer"
-            >
-              TIRAR FOTO
-            </div>
-            <p class="font-silk text-zinc-500 text-xs">OU</p>
-            <div
-              id="gallery-btn"
-              phx-hook="GalleryPick"
-              class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow inline-block"
-            >
-              [ESCOLHER DA GALERIA]
-            </div>
+          <%!-- Mobile: native file input with camera option --%>
+          <div :if={@is_mobile} class="space-y-3">
+            <label for={@uploads.photo.ref} class="font-pixel text-xs px-6 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow inline-block cursor-pointer">
+              TIRAR FOTO OU ESCOLHER DA GALERIA
+            </label>
           </div>
 
-          <%!-- Desktop: drag & drop + proxy file picker (compress before upload) --%>
+          <%!-- Desktop: drag & drop + file picker --%>
           <div :if={!@is_mobile}>
             <p class="font-silk text-zinc-400 text-sm">
               ARRASTA UMA FOTO PARA AQUI OU
             </p>
-            <div
-              id="desktop-pick-btn"
-              phx-hook="GalleryPick"
-              class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow mt-2 inline-block"
-            >
+            <label for={@uploads.photo.ref} class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow mt-2 inline-block">
               [ESCOLHER FICHEIRO]
-            </div>
+            </label>
           </div>
 
           <p class="font-silk text-zinc-600 text-xs mt-3">JPG, PNG, WEBP OU HEIC (MAX 15MB)</p>

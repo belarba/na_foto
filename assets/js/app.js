@@ -29,136 +29,14 @@ import StoryGenerator from "./story_generator"
 // Detect mobile device
 const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
-// Compress image to max 800px, JPEG 60% quality
-function compressImage(file) {
-  return new Promise((resolve) => {
-    if (!file.type.startsWith("image/")) return resolve(file)
-
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      const MAX = 800
-      const { width, height } = img
-      const ratio = Math.min(MAX / width, MAX / height, 1)
-      const newW = Math.round(width * ratio)
-      const newH = Math.round(height * ratio)
-
-      const canvas = document.createElement("canvas")
-      canvas.width = newW
-      canvas.height = newH
-      canvas.getContext("2d").drawImage(img, 0, 0, newW, newH)
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          console.log(`[NA_FOTO] ${(file.size/1024).toFixed(0)}KB → ${(blob.size/1024).toFixed(0)}KB (${newW}x${newH})`)
-          resolve(new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg", lastModified: Date.now() }))
-        } else {
-          resolve(file)
-        }
-      }, "image/jpeg", 0.6)
-    }
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
-    img.src = url
-  })
-}
-
-// Inject a compressed file into a LiveView live_file_input
-function injectFileIntoLiveInput(file) {
-  const liveInput = document.querySelector("input[data-phx-upload-ref]")
-  if (!liveInput) return
-  const dt = new DataTransfer()
-  dt.items.add(file)
-  liveInput.files = dt.files
-  liveInput.dispatchEvent(new Event("input", { bubbles: true }))
-}
-
-// Custom hooks
+// Custom hooks — minimal, no file interception
 const Hooks = {
   StoryGenerator,
 
-  // Main hook: detects mobile + creates proxy input for compressed uploads
-  ImageProxy: {
+  // Detects mobile device
+  MobileDetect: {
     mounted() {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
-
-      // Create a hidden proxy input (not managed by LiveView)
-      const proxy = document.createElement("input")
-      proxy.type = "file"
-      proxy.accept = "image/*"
-      proxy.style.display = "none"
-      proxy.id = "image-proxy-input"
-      document.body.appendChild(proxy)
-
-      // When proxy gets a file, compress and inject into LiveView input
-      proxy.addEventListener("change", async () => {
-        if (!proxy.files || proxy.files.length === 0) return
-        const file = proxy.files[0]
-        console.log(`[NA_FOTO] selected: ${file.name} (${(file.size/1024).toFixed(0)}KB)`)
-
-        let toUpload = file
-        if (file.size > 100000) {
-          toUpload = await compressImage(file)
-        }
-
-        injectFileIntoLiveInput(toUpload)
-        proxy.value = "" // reset for next selection
-      })
-
-      // Also handle drag & drop: intercept drop, compress, inject
-      this.el.addEventListener("drop", async (e) => {
-        const files = e.dataTransfer?.files
-        if (!files || files.length === 0) return
-        const file = files[0]
-        if (!file.type.startsWith("image/")) return
-
-        e.preventDefault()
-        e.stopPropagation()
-
-        let toUpload = file
-        if (file.size > 100000) {
-          toUpload = await compressImage(file)
-        }
-        injectFileIntoLiveInput(toUpload)
-      }, true)
-
-      this.el.addEventListener("dragover", (e) => {
-        e.preventDefault()
-      })
-
-      this._proxy = proxy
-    },
-    destroyed() {
-      if (this._proxy) this._proxy.remove()
-    }
-  },
-
-  // Gallery button: opens proxy input without capture
-  GalleryPick: {
-    mounted() {
-      this.el.addEventListener("click", (e) => {
-        e.preventDefault()
-        const proxy = document.getElementById("image-proxy-input")
-        if (proxy) {
-          proxy.removeAttribute("capture")
-          proxy.click()
-        }
-      })
-    }
-  },
-
-  // Camera button: opens proxy input with capture
-  CameraCapture: {
-    mounted() {
-      this.el.addEventListener("click", (e) => {
-        e.preventDefault()
-        const proxy = document.getElementById("image-proxy-input")
-        if (proxy) {
-          proxy.setAttribute("capture", "environment")
-          proxy.click()
-        }
-      })
     }
   }
 }
