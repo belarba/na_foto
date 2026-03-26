@@ -20,7 +20,9 @@ defmodule NaFotoWeb.UploadLive do
      |> allow_upload(:photo,
        accept: @accepted_types,
        max_entries: 1,
-       max_file_size: @max_file_size
+       max_file_size: @max_file_size,
+       auto_upload: true,
+       progress: &handle_progress/3
      )}
   end
 
@@ -31,6 +33,11 @@ defmodule NaFotoWeb.UploadLive do
 
   @impl true
   def handle_event("validate", _params, socket) do
+    {:noreply, socket}
+  end
+
+  defp handle_progress(:photo, entry, socket) do
+    Logger.info("[NA_FOTO] upload progress: #{entry.progress}% for #{entry.client_name}")
     {:noreply, socket}
   end
 
