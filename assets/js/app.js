@@ -80,40 +80,58 @@ const Hooks = {
   MobileDetect: {
     mounted() {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
-      this._compressing = false
 
-      // Intercept file selection to compress before upload
-      this.el.addEventListener("change", async (e) => {
-        const input = e.target
-        if (!input.matches("input[type=file]")) return
-        if (!input.files || input.files.length === 0) return
-        if (this._compressing) return // avoid re-entry
+      // Intercept file input to compress before LiveView sees it
+      const mainEl = this.el
+      const fileInputs = mainEl.querySelectorAll("input[type=file]")
 
-        const file = input.files[0]
-        if (!file.type.startsWith("image/")) return
+      const setupCompression = (input) => {
+        // Use a MutationObserver approach: when user picks a file,
+        // we intercept via the 'change' event before LiveView's 'input'
+        input.addEventListener("change", async (e) => {
+          if (input._compressing) return
+          if (!input.files || input.files.length === 0) return
 
-        // Stop LiveView from processing original
-        e.stopImmediatePropagation()
+          const file = input.files[0]
+          if (!file.type.startsWith("image/")) return
 
-        this._compressing = true
+          // Only compress if file is > 100KB
+          if (file.size < 100000) return
 
-        try {
-          const compressed = await compressImage(file)
-          console.log(`[NA_FOTO] upload ready: ${(compressed.size/1024).toFixed(0)}KB`)
+          e.stopPropagation()
+          e.preventDefault()
+          input._compressing = true
 
-          // Replace file in input
-          const dt = new DataTransfer()
-          dt.items.add(compressed)
-          input.files = dt.files
-        } catch(err) {
-          console.error("[NA_FOTO] compression failed:", err)
-        }
+          try {
+            const compressed = await compressImage(file)
+            console.log(`[NA_FOTO] compressed: ${(file.size/1024).toFixed(0)}KB → ${(compressed.size/1024).toFixed(0)}KB`)
 
-        this._compressing = false
+            const dt = new DataTransfer()
+            dt.items.add(compressed)
+            input.files = dt.files
+          } catch(err) {
+            console.error("[NA_FOTO] compression failed:", err)
+          }
 
-        // Let LiveView process the compressed file
-        input.dispatchEvent(new Event("input", { bubbles: true }))
-      }, { capture: true })
+          input._compressing = false
+          // Now dispatch input event for LiveView to pick up the compressed file
+          input.dispatchEvent(new Event("input", { bubbles: true }))
+        }, true)
+      }
+
+      // Setup on existing file inputs
+      fileInputs.forEach(setupCompression)
+
+      // Also watch for dynamically added file inputs (LiveView re-renders)
+      const observer = new MutationObserver(() => {
+        mainEl.querySelectorAll("input[type=file]").forEach((input) => {
+          if (!input._compressionSetup) {
+            input._compressionSetup = true
+            setupCompression(input)
+          }
+        })
+      })
+      observer.observe(mainEl, { childList: true, subtree: true })
     }
   },
   // Camera capture: temporarily add capture attribute to the LiveView file input
