@@ -39,10 +39,18 @@
             </svg>
           </div>
 
-          <%!-- Mobile: native file input with camera option --%>
-          <div :if={@is_mobile} class="space-y-3">
-            <label for={@uploads.photo.ref} class="font-pixel text-xs px-6 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow inline-block cursor-pointer">
-              TIRAR FOTO OU ESCOLHER DA GALERIA
+          <%!-- Mobile: camera button + gallery button --%>
+          <div :if={@is_mobile} class="space-y-5">
+            <div
+              id="camera-btn"
+              phx-hook="CameraCapture"
+              class="font-pixel text-xs px-6 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow inline-block cursor-pointer"
+            >
+              TIRAR FOTO
+            </div>
+            <p class="font-silk text-zinc-500 text-xs">OU</p>
+            <label for={@uploads.photo.ref} class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow inline-block">
+              [ESCOLHER DA GALERIA]
             </label>
           </div>
 
