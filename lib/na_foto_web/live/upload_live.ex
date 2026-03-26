@@ -34,6 +34,18 @@ defmodule NaFotoWeb.UploadLive do
 
   @impl true
   def handle_event("validate", _params, socket) do
+    {entries, _} = uploaded_entries(socket, :photo)
+    all_entries = socket.assigns.uploads.photo.entries
+
+    for entry <- all_entries do
+      errors = upload_errors(socket.assigns.uploads.photo, entry)
+      Logger.info("[NA_FOTO] validate: #{entry.client_name}, type=#{entry.client_type}, size=#{entry.client_size}, valid=#{entry.valid?}, progress=#{entry.progress}, errors=#{inspect(errors)}")
+    end
+
+    if all_entries == [] do
+      Logger.info("[NA_FOTO] validate: no entries")
+    end
+
     {:noreply, socket}
   end
 
