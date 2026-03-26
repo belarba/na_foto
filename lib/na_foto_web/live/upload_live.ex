@@ -21,8 +21,7 @@ defmodule NaFotoWeb.UploadLive do
        accept: @accepted_types,
        max_entries: 1,
        max_file_size: @max_file_size,
-       auto_upload: true,
-       chunk_size: 512_000,
+       chunk_size: 256_000,
        chunk_timeout: 60_000
      )}
   end
@@ -51,74 +50,45 @@ defmodule NaFotoWeb.UploadLive do
 
   @impl true
   def handle_event("analyze", _params, socket) do
-    {entries, _} = uploaded_entries(socket, :photo)
-    Logger.info("[NA_FOTO] analyze event received. entries=#{length(entries)}")
+    Logger.info("[NA_FOTO] analyze event received")
 
-    case entries do
-      [_entry | _] ->
-        Logger.info("[NA_FOTO] starting analysis, setting analyzing=true")
-        socket =
-          socket
-          |> assign(:analyzing, true)
-          |> assign(:error, nil)
-          |> assign(:result, nil)
-
-        send(self(), :do_analysis)
-
-        {:noreply, socket}
-
-      _ ->
-        Logger.warning("[NA_FOTO] no entries found!")
-        {:noreply, assign(socket, :error, "Por favor seleciona uma foto primeiro.")}
-    end
-  end
-
-  @impl true
-  def handle_info(:do_analysis, socket) do
-    Logger.info("[NA_FOTO] do_analysis started")
+    socket =
+      socket
+      |> assign(:analyzing, true)
+      |> assign(:error, nil)
+      |> assign(:result, nil)
 
     try do
       [{image_binary, filename}] =
         consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
-          Logger.info("[NA_FOTO] consuming file: #{entry.client_name}, path: #{path}")
+          Logger.info("[NA_FOTO] consuming: #{entry.client_name}, size=#{entry.client_size}")
           binary = File.read!(path)
-          Logger.info("[NA_FOTO] file read OK, size: #{byte_size(binary)} bytes")
           {:ok, {binary, entry.client_name}}
         end)
 
-      Logger.info("[NA_FOTO] generating preview...")
+      Logger.info("[NA_FOTO] file consumed, #{byte_size(image_binary)} bytes")
 
       preview_base64 =
         try do
           generate_preview(image_binary)
         rescue
-          e ->
-            Logger.error("[NA_FOTO] preview generation failed: #{Exception.message(e)}")
-            Base.encode64(image_binary)
+          _ -> Base.encode64(image_binary)
         end
 
-      Logger.info("[NA_FOTO] preview OK, launching analysis task...")
       socket = assign(socket, :uploaded_image, "data:image/jpeg;base64,#{preview_base64}")
 
       lv = self()
 
       Task.start(fn ->
-        Logger.info("[NA_FOTO] analysis task started for #{filename}")
-
         result =
           try do
             Analyzer.analyze(image_binary, filename)
           rescue
-            e ->
-              Logger.error("[NA_FOTO] analysis error: #{Exception.message(e)}")
-              {:error, "Erro inesperado: #{Exception.message(e)}"}
+            e -> {:error, "Erro: #{Exception.message(e)}"}
           catch
-            kind, reason ->
-              Logger.error("[NA_FOTO] analysis crash: #{kind}: #{inspect(reason)}")
-              {:error, "#{kind}: #{inspect(reason)}"}
+            kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
           end
 
-        Logger.info("[NA_FOTO] analysis complete, sending result: #{inspect(elem(result, 0), limit: 1)}")
         send(lv, {:analysis_complete, result})
       end)
 
@@ -127,7 +97,7 @@ defmodule NaFotoWeb.UploadLive do
       {:noreply, socket}
     rescue
       e ->
-        Logger.error("[NA_FOTO] do_analysis CRASHED: #{Exception.message(e)}\n#{Exception.format_stacktrace(__STACKTRACE__)}")
+        Logger.error("[NA_FOTO] analyze CRASHED: #{Exception.message(e)}")
 
         {:noreply,
          socket

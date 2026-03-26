@@ -78,8 +78,8 @@
             </div>
           </div>
 
-          <%!-- Upload progress --%>
-          <div :if={entry.progress < 100} class="space-y-1">
+          <%!-- Upload progress (shown during form submit) --%>
+          <div :if={entry.progress > 0 and entry.progress < 100} class="space-y-1">
             <div class="h-2 bg-zinc-800 pixel-border-sm border-zinc-700 overflow-hidden">
               <div class="h-full bg-amber-500 pixel-bar" style={"width: #{entry.progress}%"}></div>
             </div>
@@ -93,18 +93,13 @@
           </p>
         </div>
 
-        <div class="mt-6 flex justify-center">
+        <div :if={@uploads.photo.entries != []} class="mt-6 flex justify-center">
           <button
-            :if={@uploads.photo.entries != [] && Enum.all?(@uploads.photo.entries, &(&1.progress == 100))}
             type="submit"
             class="font-pixel text-xs px-8 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow"
           >
             >> ANALISAR &lt;&lt;
           </button>
-          <p :if={@uploads.photo.entries != [] && !Enum.all?(@uploads.photo.entries, &(&1.progress == 100))}
-            class="font-silk text-amber-400 text-xs">
-            AGUARDA O ENVIO COMPLETO...
-          </p>
         </div>
       </div>
 
