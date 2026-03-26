@@ -9,6 +9,13 @@ defmodule NaFotoWeb.UploadLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    is_mobile =
+      if connected?(socket) do
+        get_connect_params(socket)["is_mobile"] || false
+      else
+        false
+      end
+
     {:ok,
      socket
      |> assign(:result, nil)
@@ -16,7 +23,7 @@ defmodule NaFotoWeb.UploadLive do
      |> assign(:error, nil)
      |> assign(:uploaded_image, nil)
      |> assign(:annotations, [])
-     |> assign(:is_mobile, false)
+     |> assign(:is_mobile, is_mobile)
      |> allow_upload(:photo,
        accept: @accepted_types,
        max_entries: 1,

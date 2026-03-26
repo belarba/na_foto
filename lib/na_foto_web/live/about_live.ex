@@ -105,7 +105,7 @@ defmodule NaFotoWeb.AboutLive do
 
       <footer class="text-center mt-8">
         <p class="font-pixel text-[8px] text-zinc-700">
-          BUILT WITH ELIXIR + PHOENIX + SEGFORMER AI
+          FEITO COM ELIXIR + PHOENIX + SEGFORMER AI
         </p>
       </footer>
     </div>

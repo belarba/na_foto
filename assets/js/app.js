@@ -71,9 +71,10 @@ const Hooks = {
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
-  // Disabled longpoll fallback: uploads only work via WebSocket
-  // longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken},
+  params: {
+    _csrf_token: csrfToken,
+    is_mobile: isMobile
+  },
   hooks: {...colocatedHooks, ...Hooks},
 })
 
