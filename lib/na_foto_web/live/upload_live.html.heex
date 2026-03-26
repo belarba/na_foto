@@ -19,11 +19,14 @@
   <%!-- UPLOAD AREA --%>
   <div :if={!@result} class="mb-8">
     <form id="upload-form" phx-submit="analyze" phx-change="validate">
-      <div
+      <%!-- Keep file input always in DOM for upload to work --%>
+      <.live_file_input upload={@uploads.photo} class="sr-only" />
+
+      <%!-- Upload card: hidden during analysis --%>
+      <div :if={!@analyzing}
         class="pixel-border border-zinc-500 bg-zinc-900/50 p-8 md:p-12 text-center hover:border-emerald-400 pixel-transition scanlines"
         phx-drop-target={@uploads.photo.ref}
       >
-        <.live_file_input upload={@uploads.photo} class="sr-only" />
 
         <div :if={@uploads.photo.entries == []}>
           <%!-- Pixel camera icon --%>
@@ -87,21 +90,21 @@
             &#x2718; <%= upload_error_to_string(err) %>
           </p>
         </div>
+
+        <div class="mt-6 flex justify-center">
+          <button
+            :if={@uploads.photo.entries != []}
+            type="submit"
+            class="font-pixel text-xs px-8 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow"
+          >
+            >> ANALISAR &lt;&lt;
+          </button>
+        </div>
       </div>
 
-      <div :if={!@analyzing} class="mt-6 flex justify-center">
-        <button
-          :if={@uploads.photo.entries != []}
-          type="submit"
-          class="font-pixel text-xs px-8 py-4 bg-emerald-600 text-white pixel-border border-emerald-400 hover:bg-emerald-500 pixel-transition pixel-glow"
-        >
-          >> ANALISAR &lt;&lt;
-        </button>
-      </div>
-
-      <%!-- Loading animation inside the form --%>
-      <div :if={@analyzing} class="mt-6 space-y-4">
-        <div class="pixel-border border-zinc-600 bg-zinc-900 p-4">
+      <%!-- Loading animation: replaces upload card during analysis --%>
+      <div :if={@analyzing} class="space-y-4">
+        <div class="pixel-border border-zinc-600 bg-zinc-900 p-6">
           <p class="font-silk text-emerald-400 text-sm mb-3">&gt; A PROCESSAR IMAGEM...</p>
           <div class="h-4 bg-zinc-800 pixel-border-sm border-zinc-600">
             <div class="h-full bg-emerald-500 pixel-bar pixel-loading"></div>

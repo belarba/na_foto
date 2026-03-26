@@ -37,56 +37,64 @@ defmodule NaFotoWeb.UploadLive do
   def handle_event("analyze", _params, socket) do
     case uploaded_entries(socket, :photo) do
       {[_entry | _], _} ->
+        # Show loading immediately, then process in next tick
         socket =
           socket
           |> assign(:analyzing, true)
           |> assign(:error, nil)
           |> assign(:result, nil)
 
-        try do
-          [{image_binary, filename}] =
-            consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
-              binary = File.read!(path)
-              {:ok, {binary, entry.client_name}}
-            end)
+        send(self(), :do_analysis)
 
-          preview_base64 =
-            try do
-              generate_preview(image_binary)
-            rescue
-              _ -> Base.encode64(image_binary)
-            end
-
-          socket = assign(socket, :uploaded_image, "data:image/jpeg;base64,#{preview_base64}")
-
-          lv = self()
-
-          Task.start(fn ->
-            result =
-              try do
-                Analyzer.analyze(image_binary, filename)
-              rescue
-                e -> {:error, "Erro inesperado: #{Exception.message(e)}"}
-              catch
-                kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
-              end
-
-            send(lv, {:analysis_complete, result})
-          end)
-
-          Process.send_after(self(), :analysis_timeout, 120_000)
-
-          {:noreply, socket}
-        rescue
-          e ->
-            {:noreply,
-             socket
-             |> assign(:analyzing, false)
-             |> assign(:error, "Erro ao processar ficheiro: #{Exception.message(e)}")}
-        end
+        {:noreply, socket}
 
       _ ->
         {:noreply, assign(socket, :error, "Por favor seleciona uma foto primeiro.")}
+    end
+  end
+
+  @impl true
+  def handle_info(:do_analysis, socket) do
+    try do
+      [{image_binary, filename}] =
+        consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
+          binary = File.read!(path)
+          {:ok, {binary, entry.client_name}}
+        end)
+
+      preview_base64 =
+        try do
+          generate_preview(image_binary)
+        rescue
+          _ -> Base.encode64(image_binary)
+        end
+
+      socket = assign(socket, :uploaded_image, "data:image/jpeg;base64,#{preview_base64}")
+
+      lv = self()
+
+      Task.start(fn ->
+        result =
+          try do
+            Analyzer.analyze(image_binary, filename)
+          rescue
+            e -> {:error, "Erro inesperado: #{Exception.message(e)}"}
+          catch
+            kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
+          end
+
+        send(lv, {:analysis_complete, result})
+      end)
+
+      Process.send_after(self(), :analysis_timeout, 120_000)
+
+      {:noreply, socket}
+    rescue
+      e ->
+        {:noreply,
+         socket
+         |> assign(:analyzing, false)
+         |> assign(:error, "Erro ao processar ficheiro: #{Exception.message(e)}")}
     end
   end
 
