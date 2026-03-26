@@ -88,12 +88,20 @@ const Hooks = {
   // Camera capture: temporarily add capture attribute to the LiveView file input
   CameraCapture: {
     mounted() {
-      this.el.addEventListener("click", () => {
+      this.el.addEventListener("click", (e) => {
+        e.preventDefault()
         const liveInput = document.querySelector("input[data-phx-upload-ref]")
         if (liveInput) {
+          // Remove capture on change (after photo taken) or after 60s timeout
+          const cleanup = () => {
+            liveInput.removeAttribute("capture")
+            liveInput.removeEventListener("change", cleanup)
+          }
+          liveInput.addEventListener("change", cleanup, { once: true })
+          setTimeout(cleanup, 60000)
+
           liveInput.setAttribute("capture", "environment")
           liveInput.click()
-          setTimeout(() => liveInput.removeAttribute("capture"), 1000)
         }
       })
     }

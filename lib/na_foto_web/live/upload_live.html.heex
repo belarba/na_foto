@@ -23,7 +23,7 @@
         class="pixel-border border-zinc-500 bg-zinc-900/50 p-8 md:p-12 text-center hover:border-emerald-400 pixel-transition scanlines"
         phx-drop-target={@uploads.photo.ref}
       >
-        <.live_file_input upload={@uploads.photo} class="hidden" />
+        <.live_file_input upload={@uploads.photo} class="sr-only" />
 
         <div :if={@uploads.photo.entries == []}>
           <%!-- Pixel camera icon --%>
