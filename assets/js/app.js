@@ -38,29 +38,6 @@ const Hooks = {
     mounted() {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
     }
-  },
-
-  // Opens the LiveView file input with capture="environment" for camera
-  // Does NOT create proxy inputs or manipulate files — just sets an attribute
-  CameraCapture: {
-    mounted() {
-      this.el.addEventListener("click", (e) => {
-        e.preventDefault()
-        const liveInput = document.querySelector("input[data-phx-upload-ref]")
-        if (!liveInput) return
-
-        // Add capture attribute temporarily
-        liveInput.setAttribute("capture", "environment")
-
-        // Remove capture after file is selected (or timeout)
-        const cleanup = () => liveInput.removeAttribute("capture")
-        liveInput.addEventListener("change", cleanup, { once: true })
-        setTimeout(cleanup, 60000)
-
-        // Trigger native file picker with camera
-        liveInput.click()
-      })
-    }
   }
 }
 
