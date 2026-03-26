@@ -38,6 +38,34 @@ const Hooks = {
     mounted() {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
     }
+  },
+
+  // Opens camera directly by temporarily adding capture attribute to the LiveView file input
+  CameraCapture: {
+    mounted() {
+      this.el.addEventListener("click", (e) => {
+        e.preventDefault()
+        const inputId = this.el.dataset.inputId
+        const input = document.getElementById(inputId)
+        if (!input) return
+
+        // Add capture attribute to open camera directly
+        input.setAttribute("capture", "environment")
+
+        // Remove capture after file is selected (or cancelled) so gallery button works normally
+        const cleanup = () => {
+          input.removeAttribute("capture")
+          input.removeEventListener("change", cleanup)
+          // Also cleanup on next click of gallery label
+        }
+        input.addEventListener("change", cleanup, { once: true })
+
+        // Also remove capture after a timeout (in case user cancels)
+        setTimeout(() => input.removeAttribute("capture"), 60000)
+
+        input.click()
+      })
+    }
   }
 }
 
