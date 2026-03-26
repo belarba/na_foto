@@ -140,31 +140,34 @@ async function generateSlide1(data) {
     })
   })
 
-  // Segmentation summary below image
-  const summaryY = drawY + drawH + 50
-  annotations.forEach((ann, i) => {
-    const barY = summaryY + i * 55
-    if (barY + 50 > STORY_H - 120) return
+  // Compact segmentation bars below image (inline: label | bar | %)
+  const summaryY = drawY + drawH + 40
+  const labelW = 250
+  const pctW = 110
+  const barX = PADDING + labelW + 10
+  const barW = STORY_W - PADDING * 2 - labelW - pctW - 20
+  const rowH = 38
 
-    const labelText = ann.category.toUpperCase()
-    drawText(ctx, labelText, PADDING, barY, {
-      font: "12px 'Press Start 2P'",
-      color: "#9CA3AF"
+  annotations.forEach((ann, i) => {
+    const rowY = summaryY + i * rowH
+    if (rowY + rowH > STORY_H - 80) return
+
+    drawText(ctx, ann.category.toUpperCase(), PADDING, rowY + 4, {
+      font: "16px 'Press Start 2P'",
+      color: "#D1D5DB"
     })
 
-    const barX = PADDING
-    const barW = STORY_W - PADDING * 2 - 120
-    drawBar(ctx, barX, barY + 22, barW, 20, ann.percentage, ann.color)
+    drawBar(ctx, barX, rowY, barW, 28, ann.percentage, ann.color)
 
-    drawText(ctx, `${ann.percentage}%`, barX + barW + 10, barY + 22, {
-      font: "12px 'Press Start 2P'",
-      color: "#E5E7EB"
+    drawText(ctx, `${ann.percentage}%`, STORY_W - PADDING - pctW + 10, rowY + 4, {
+      font: "16px 'Press Start 2P'",
+      color: "#fff"
     })
   })
 
   // Footer
-  drawText(ctx, "nafoto.app", STORY_W / 2, STORY_H - 80, {
-    font: "12px 'Press Start 2P'",
+  drawText(ctx, "nafoto.app", STORY_W / 2, STORY_H - 60, {
+    font: "14px 'Press Start 2P'",
     color: "#374151",
     align: "center"
   })
@@ -197,123 +200,122 @@ async function generateSlide2(data) {
     align: "center"
   })
 
+  // Layout constants for compact inline rows
+  const labelW = 250
+  const pctW = 110
+  const s2barX = PADDING + labelW + 10
+  const s2barW = STORY_W - PADDING * 2 - labelW - pctW - 20
+  const rowH = 42
+
   let curY = 180
+
+  // Segmentation section
+  const annotations = data.annotations || []
+  if (annotations.length > 0) {
+    drawText(ctx, "> SEGMENTACAO", PADDING, curY, {
+      font: "24px 'Press Start 2P'",
+      color: ACCENT
+    })
+    curY += 55
+
+    annotations.forEach((ann) => {
+      if (curY > 700) return
+
+      drawText(ctx, ann.category.toUpperCase(), PADDING, curY + 4, {
+        font: "18px 'Press Start 2P'",
+        color: "#D1D5DB"
+      })
+
+      drawBar(ctx, s2barX, curY, s2barW, 30, ann.percentage, ann.color)
+
+      drawText(ctx, `${ann.percentage}%`, STORY_W - PADDING - pctW + 10, curY + 4, {
+        font: "18px 'Press Start 2P'",
+        color: "#fff"
+      })
+
+      curY += rowH
+    })
+  }
 
   // Color distribution section
   const colors = data.colors || {}
   const colorEntries = Object.entries(colors).sort((a, b) => b[1] - a[1])
 
   if (colorEntries.length > 0) {
+    curY += 40
+
     drawText(ctx, "> CORES", PADDING, curY, {
-      font: "20px 'Press Start 2P'",
+      font: "24px 'Press Start 2P'",
       color: "#FBBF24"
     })
-    curY += 50
+    curY += 55
 
     colorEntries.forEach(([name, pct]) => {
-      if (curY > 900) return
+      if (curY > 1300) return
       const cssColor = data.colorMap[name] || "#6B7280"
 
-      drawText(ctx, name.toUpperCase(), PADDING, curY, {
-        font: "12px 'Press Start 2P'",
-        color: "#9CA3AF"
+      drawText(ctx, name.toUpperCase(), PADDING, curY + 4, {
+        font: "18px 'Press Start 2P'",
+        color: "#D1D5DB"
       })
 
-      const barX = PADDING
-      const barW = STORY_W - PADDING * 2 - 120
-      drawBar(ctx, barX, curY + 22, barW, 20, pct, cssColor)
+      drawBar(ctx, s2barX, curY, s2barW, 30, pct, cssColor)
 
-      drawText(ctx, `${pct}%`, barX + barW + 10, curY + 22, {
-        font: "12px 'Press Start 2P'",
-        color: "#E5E7EB"
+      drawText(ctx, `${pct}%`, STORY_W - PADDING - pctW + 10, curY + 4, {
+        font: "18px 'Press Start 2P'",
+        color: "#fff"
       })
 
-      curY += 55
+      curY += rowH
     })
   }
 
   // Dominant colors palette
   const dominantColors = data.dominantColors || []
   if (dominantColors.length > 0) {
-    curY = Math.max(curY + 30, 950)
+    curY += 40
 
     drawText(ctx, "> PALETA", PADDING, curY, {
-      font: "20px 'Press Start 2P'",
+      font: "24px 'Press Start 2P'",
       color: "#D946EF"
     })
-    curY += 60
+    curY += 55
 
-    const swatchSize = 120
-    const gap = 30
-    const totalW = dominantColors.length * swatchSize + (dominantColors.length - 1) * gap
+    const maxSwatches = Math.min(dominantColors.length, 5)
+    const swatchSize = Math.min(140, (STORY_W - PADDING * 2 - (maxSwatches - 1) * 20) / maxSwatches)
+    const gap = 20
+    const totalW = maxSwatches * swatchSize + (maxSwatches - 1) * gap
     const startX = (STORY_W - totalW) / 2
 
-    dominantColors.forEach((color, i) => {
+    dominantColors.slice(0, maxSwatches).forEach((color, i) => {
       const sx = startX + i * (swatchSize + gap)
 
-      // Swatch
       ctx.fillStyle = color.hex
       ctx.fillRect(sx, curY, swatchSize, swatchSize)
       drawPixelBorder(ctx, sx, curY, swatchSize, swatchSize, "#000", 3)
 
-      // Hex label
-      drawText(ctx, color.hex, sx + swatchSize / 2, curY + swatchSize + 12, {
-        font: "10px 'Press Start 2P'",
+      drawText(ctx, color.hex, sx + swatchSize / 2, curY + swatchSize + 14, {
+        font: "12px 'Press Start 2P'",
         color: "#9CA3AF",
         align: "center"
       })
 
-      // Percentage
-      drawText(ctx, `${color.percentage}%`, sx + swatchSize / 2, curY + swatchSize + 32, {
-        font: "10px 'Silkscreen'",
+      drawText(ctx, `${color.percentage}%`, sx + swatchSize / 2, curY + swatchSize + 36, {
+        font: "14px 'Press Start 2P'",
         color: "#6B7280",
         align: "center"
       })
     })
-
-    curY += swatchSize + 70
-  }
-
-  // Segmentation summary
-  const annotations = data.annotations || []
-  if (annotations.length > 0) {
-    curY = Math.max(curY + 20, 1350)
-
-    drawText(ctx, "> SEGMENTACAO", PADDING, curY, {
-      font: "20px 'Press Start 2P'",
-      color: ACCENT
-    })
-    curY += 50
-
-    annotations.forEach((ann) => {
-      if (curY > STORY_H - 150) return
-
-      drawText(ctx, ann.category.toUpperCase(), PADDING, curY, {
-        font: "12px 'Press Start 2P'",
-        color: "#9CA3AF"
-      })
-
-      const barX = PADDING
-      const barW = STORY_W - PADDING * 2 - 120
-      drawBar(ctx, barX, curY + 22, barW, 20, ann.percentage, ann.color)
-
-      drawText(ctx, `${ann.percentage}%`, barX + barW + 10, curY + 22, {
-        font: "12px 'Press Start 2P'",
-        color: "#E5E7EB"
-      })
-
-      curY += 55
-    })
   }
 
   // Footer
-  drawText(ctx, "NA FOTO", STORY_W / 2, STORY_H - 100, {
-    font: "16px 'Press Start 2P'",
+  drawText(ctx, "NA FOTO", STORY_W / 2, STORY_H - 90, {
+    font: "20px 'Press Start 2P'",
     color: ACCENT,
     align: "center"
   })
-  drawText(ctx, "AI IMAGE ANALYSIS", STORY_W / 2, STORY_H - 65, {
-    font: "10px 'Silkscreen'",
+  drawText(ctx, "AI IMAGE ANALYSIS", STORY_W / 2, STORY_H - 55, {
+    font: "12px 'Silkscreen'",
     color: "#374151",
     align: "center"
   })
