@@ -1,4 +1,4 @@
-<div class="max-w-4xl mx-auto px-4 py-8" id="main" phx-hook="MobileDetect">
+<div class="max-w-4xl mx-auto px-4 py-8" id="main" phx-hook="ImageProxy">
   <%!-- HEADER --%>
   <header class="text-center mb-12">
     <h1 class="font-pixel text-2xl md:text-4xl text-emerald-400 drop-shadow-[3px_3px_0_rgba(0,0,0,0.8)]">
@@ -39,7 +39,7 @@
             </svg>
           </div>
 
-          <%!-- Mobile: two labels, one for camera (with capture), one for gallery --%>
+          <%!-- Mobile: two buttons via proxy input (compress before upload) --%>
           <div :if={@is_mobile} class="space-y-5">
             <div
               id="camera-btn"
@@ -49,19 +49,27 @@
               TIRAR FOTO
             </div>
             <p class="font-silk text-zinc-500 text-xs">OU</p>
-            <label for={@uploads.photo.ref} class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow inline-block">
+            <div
+              id="gallery-btn"
+              phx-hook="GalleryPick"
+              class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow inline-block"
+            >
               [ESCOLHER DA GALERIA]
-            </label>
+            </div>
           </div>
 
-          <%!-- Desktop: drag & drop + file picker --%>
+          <%!-- Desktop: drag & drop + proxy file picker (compress before upload) --%>
           <div :if={!@is_mobile}>
             <p class="font-silk text-zinc-400 text-sm">
               ARRASTA UMA FOTO PARA AQUI OU
             </p>
-            <label for={@uploads.photo.ref} class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow mt-2 inline-block">
+            <div
+              id="desktop-pick-btn"
+              phx-hook="GalleryPick"
+              class="font-pixel text-emerald-400 text-xs cursor-pointer hover:text-emerald-300 pixel-glow mt-2 inline-block"
+            >
               [ESCOLHER FICHEIRO]
-            </label>
+            </div>
           </div>
 
           <p class="font-silk text-zinc-600 text-xs mt-3">JPG, PNG, WEBP OU HEIC (MAX 15MB)</p>
