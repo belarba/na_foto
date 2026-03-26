@@ -29,12 +29,13 @@ import StoryGenerator from "./story_generator"
 // Detect mobile device
 const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
-// Resize image client-side before upload (max 1600px on longest side)
-const MAX_DIMENSION = 1600
+// Aggressively resize image before upload: max 800px, JPEG 60% quality
+// The AI model only needs 512x512, so 800px is more than enough
+const MAX_DIMENSION = 800
+const JPEG_QUALITY = 0.6
 
-function resizeImage(file) {
+function compressImage(file) {
   return new Promise((resolve) => {
-    // Skip non-image or already small files
     if (!file.type.startsWith("image/")) return resolve(file)
 
     const img = new Image()
@@ -44,12 +45,7 @@ function resizeImage(file) {
       URL.revokeObjectURL(url)
 
       const { width, height } = img
-
-      // Skip if already small enough
-      if (width <= MAX_DIMENSION && height <= MAX_DIMENSION) return resolve(file)
-
-      // Calculate new dimensions
-      const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height)
+      const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height, 1)
       const newW = Math.round(width * ratio)
       const newH = Math.round(height * ratio)
 
@@ -61,12 +57,12 @@ function resizeImage(file) {
 
       canvas.toBlob((blob) => {
         if (blob) {
-          const resized = new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() })
-          resolve(resized)
+          console.log(`[NA_FOTO] compressed: ${(file.size/1024).toFixed(0)}KB → ${(blob.size/1024).toFixed(0)}KB (${newW}x${newH})`)
+          resolve(new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() }))
         } else {
           resolve(file)
         }
-      }, "image/jpeg", 0.85)
+      }, "image/jpeg", JPEG_QUALITY)
     }
 
     img.onerror = () => {
@@ -80,10 +76,44 @@ function resizeImage(file) {
 
 // Custom hooks
 const Hooks = {
-  // Detects mobile and pushes event to LiveView
+  // Detects mobile and sets up image compression
   MobileDetect: {
     mounted() {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
+      this._compressing = false
+
+      // Intercept file selection to compress before upload
+      this.el.addEventListener("change", async (e) => {
+        const input = e.target
+        if (!input.matches("input[type=file]")) return
+        if (!input.files || input.files.length === 0) return
+        if (this._compressing) return // avoid re-entry
+
+        const file = input.files[0]
+        if (!file.type.startsWith("image/")) return
+
+        // Stop LiveView from processing original
+        e.stopImmediatePropagation()
+
+        this._compressing = true
+
+        try {
+          const compressed = await compressImage(file)
+          console.log(`[NA_FOTO] upload ready: ${(compressed.size/1024).toFixed(0)}KB`)
+
+          // Replace file in input
+          const dt = new DataTransfer()
+          dt.items.add(compressed)
+          input.files = dt.files
+        } catch(err) {
+          console.error("[NA_FOTO] compression failed:", err)
+        }
+
+        this._compressing = false
+
+        // Let LiveView process the compressed file
+        input.dispatchEvent(new Event("input", { bubbles: true }))
+      }, { capture: true })
     }
   },
   // Camera capture: temporarily add capture attribute to the LiveView file input
@@ -116,6 +146,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
   params: {_csrf_token: csrfToken},
   hooks: {...colocatedHooks, ...Hooks},
 })
+
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
