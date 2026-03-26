@@ -29,109 +29,12 @@ import StoryGenerator from "./story_generator"
 // Detect mobile device
 const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
-// Aggressively resize image before upload: max 800px, JPEG 60% quality
-// The AI model only needs 512x512, so 800px is more than enough
-const MAX_DIMENSION = 800
-const JPEG_QUALITY = 0.6
-
-function compressImage(file) {
-  return new Promise((resolve) => {
-    if (!file.type.startsWith("image/")) return resolve(file)
-
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-
-      const { width, height } = img
-      const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height, 1)
-      const newW = Math.round(width * ratio)
-      const newH = Math.round(height * ratio)
-
-      const canvas = document.createElement("canvas")
-      canvas.width = newW
-      canvas.height = newH
-      const ctx = canvas.getContext("2d")
-      ctx.drawImage(img, 0, 0, newW, newH)
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          console.log(`[NA_FOTO] compressed: ${(file.size/1024).toFixed(0)}KB → ${(blob.size/1024).toFixed(0)}KB (${newW}x${newH})`)
-          resolve(new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() }))
-        } else {
-          resolve(file)
-        }
-      }, "image/jpeg", JPEG_QUALITY)
-    }
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      resolve(file)
-    }
-
-    img.src = url
-  })
-}
-
 // Custom hooks
 const Hooks = {
-  // Detects mobile and sets up image compression
+  // Detects mobile
   MobileDetect: {
     mounted() {
       this.pushEvent("mobile_detected", { is_mobile: isMobile })
-
-      // Intercept file input to compress before LiveView sees it
-      const mainEl = this.el
-      const fileInputs = mainEl.querySelectorAll("input[type=file]")
-
-      const setupCompression = (input) => {
-        // Use a MutationObserver approach: when user picks a file,
-        // we intercept via the 'change' event before LiveView's 'input'
-        input.addEventListener("change", async (e) => {
-          if (input._compressing) return
-          if (!input.files || input.files.length === 0) return
-
-          const file = input.files[0]
-          if (!file.type.startsWith("image/")) return
-
-          // Only compress if file is > 100KB
-          if (file.size < 100000) return
-
-          e.stopPropagation()
-          e.preventDefault()
-          input._compressing = true
-
-          try {
-            const compressed = await compressImage(file)
-            console.log(`[NA_FOTO] compressed: ${(file.size/1024).toFixed(0)}KB → ${(compressed.size/1024).toFixed(0)}KB`)
-
-            const dt = new DataTransfer()
-            dt.items.add(compressed)
-            input.files = dt.files
-          } catch(err) {
-            console.error("[NA_FOTO] compression failed:", err)
-          }
-
-          input._compressing = false
-          // Now dispatch input event for LiveView to pick up the compressed file
-          input.dispatchEvent(new Event("input", { bubbles: true }))
-        }, true)
-      }
-
-      // Setup on existing file inputs
-      fileInputs.forEach(setupCompression)
-
-      // Also watch for dynamically added file inputs (LiveView re-renders)
-      const observer = new MutationObserver(() => {
-        mainEl.querySelectorAll("input[type=file]").forEach((input) => {
-          if (!input._compressionSetup) {
-            input._compressionSetup = true
-            setupCompression(input)
-          }
-        })
-      })
-      observer.observe(mainEl, { childList: true, subtree: true })
     }
   },
   // Camera capture: temporarily add capture attribute to the LiveView file input
