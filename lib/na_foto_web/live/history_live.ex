@@ -31,17 +31,13 @@ defmodule NaFotoWeb.HistoryLive do
 
       <div class="space-y-4">
         <div :for={analysis <- @analyses} class="pixel-border border-zinc-600 bg-zinc-900/80 p-4">
-          <div class="flex items-start justify-between">
-            <div>
-              <h3 class="font-silk text-emerald-400 text-sm"><%= analysis.filename %></h3>
-              <p class="font-silk text-zinc-600 text-xs mt-1">
-                <%= format_date(analysis.inserted_at) %> | <%= analysis.width %>&times;<%= analysis.height %>px
-              </p>
-            </div>
+          <div>
+            <p class="font-silk text-zinc-500 text-xs">
+              <%= format_date(analysis.inserted_at) %> | <%= analysis.width %>&times;<%= analysis.height %>px
+            </p>
           </div>
 
           <div :if={analysis.segmentation != %{}} class="mt-3">
-            <p class="font-pixel text-[8px] text-zinc-500 mb-2">SEGMENTACAO:</p>
             <div class="flex gap-2 flex-wrap">
               <span
                 :for={{cat, pct} <- Enum.sort_by(analysis.segmentation, fn {_, v} -> v end, :desc)}
@@ -52,7 +48,7 @@ defmodule NaFotoWeb.HistoryLive do
             </div>
           </div>
 
-          <div :if={analysis.dominant_colors != []} class="mt-3 flex gap-2">
+          <div :if={analysis.dominant_colors != []} class="mt-3 flex gap-2 flex-wrap">
             <div
               :for={color <- analysis.dominant_colors}
               class="w-6 h-6 pixel-swatch"
